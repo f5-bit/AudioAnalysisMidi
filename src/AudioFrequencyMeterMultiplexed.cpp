@@ -59,6 +59,66 @@ float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 
 	//Either read or write the multiplexed pin here
 
+	return getFrequency();
+}
+
+void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
+{
+	samplePin = pin;                              // Store ADC channel to sample
+	sampleRate = rate;                            // Store sample rate value
+	analogRead(pin);                              // To start setting-up the ADC
+
+	ADCdisable();
+	ADCconfigure();
+	ADCenable();
+	tcConfigure();
+	tcEnable();
+}
+
+void AudioFrequencyMeterMultiplexed::end()
+{
+	ADCdisable();
+	tcDisable();
+	tcReset();
+}
+
+void AudioFrequencyMeterMultiplexed::setClippingPin(int pin)
+{
+	clippingPin = pin;                              // Store the clipping pin value
+	pinMode(clippingPin, OUTPUT);
+}
+
+void AudioFrequencyMeterMultiplexed::checkClipping()
+{
+	if (clipping) {
+		digitalWrite(clippingPin, LOW);
+		clipping = false;
+	}
+}
+
+void AudioFrequencyMeterMultiplexed::setAmplitudeThreshold(int threshold)
+{
+	amplitudeThreshold = abs(MIDPOINT - threshold);
+}
+
+void AudioFrequencyMeterMultiplexed::setTimerTolerance(int tolerance)
+{
+	timerTolerance = tolerance;
+}
+
+void AudioFrequencyMeterMultiplexed::setSlopeTolerance(int tolerance)
+{
+	slopeTolerance = tolerance;
+}
+
+void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
+{
+	minFrequency = min;
+	maxFrequency = max;
+}
+
+float AudioFrequencyMeterMultiplexed::getFrequency()
+{
 	float frequency = -1;
 
 	if (checkMaxAmp > amplitudeThreshold) {
@@ -116,6 +176,11 @@ void AudioFrequencyMeterMultiplexed::ADCconfigure()
 		;
 
 	ADCsetMux();
+}
+
+bool ADCisSyncing()
+{
+	return (ADC->STATUS.bit.SYNCBUSY);
 }
 
 void AudioFrequencyMeterMultiplexed::ADCdisable()
