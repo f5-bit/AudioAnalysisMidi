@@ -13,7 +13,7 @@ static int timerTolerance;
 static bool clipping;
 static int clippingPin;
 
-static int  newData, prevData;                           // Variables to store ADC result
+static int  newData[8], prevData;                           // Variables to store ADC result
 
 static unsigned int time, totalTimer;                    // Variables used to compute period
 static volatile unsigned int period;
@@ -144,7 +144,12 @@ void AudioFrequencyMeterMultiplexed::initializeVariables()
 
 	clipping = false;
 	clippingPin = NOT_INITIALIZED;
-	newData = 0;
+
+	for (int i = 0; i < sizeof(newData); i++)
+	{
+		newData[i] = 0;
+	}
+
 	prevData = MIDPOINT;
 	time = 0;
 	arrayIndex = 0;
@@ -296,12 +301,19 @@ uint8_t ADCread()
 
 void TC5_Handler(void)
 {
-	prevData = newData;
-	newData = ADCread();
+	analyzeIncomingData(0);
 
-	if ((prevData < MIDPOINT) && (newData >= MIDPOINT)) {
+	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
+}
 
-		newSlope = newData - prevData;
+void analyzeIncomingData(int index)
+{
+	prevData = newData[index];
+	newData[index] = ADCread();
+
+	if ((prevData < MIDPOINT) && (newData[index] >= MIDPOINT)) {
+
+		newSlope = newData[index] - prevData;
 
 		if (abs(newSlope - maxSlope) < slopeTolerance) {
 			slope[arrayIndex] = newSlope;
@@ -351,7 +363,7 @@ void TC5_Handler(void)
 
 	if (clippingPin > 0)
 	{
-		if (newData == BOTTOMPOINT || newData == TOPPOINT) {
+		if (newData[index] == BOTTOMPOINT || newData[index] == TOPPOINT) {
 			digitalWrite(clippingPin, HIGH);
 			clipping = true;
 		}
@@ -360,7 +372,7 @@ void TC5_Handler(void)
 	time++;                             // Incremented at sampleRate
 	amplitudeTimer++;                   // Incremented at sampleRate
 
-	newMaxAmplitude = abs(MIDPOINT - newData);
+	newMaxAmplitude = abs(MIDPOINT - newData[index]);
 
 	if (newMaxAmplitude > maxAmplitude) {
 		maxAmplitude = newMaxAmplitude;
@@ -371,6 +383,4 @@ void TC5_Handler(void)
 		checkMaxAmp = maxAmplitude;
 		maxAmplitude = 0;
 	}
-
-	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
 }
