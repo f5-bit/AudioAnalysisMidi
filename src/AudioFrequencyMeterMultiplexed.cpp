@@ -7,31 +7,33 @@
 #define MIDPOINT                127
 #define TOPPOINT                255
 
+#define MUXSIZE					8
+
 static int slopeTolerance;
 static int timerTolerance;
 
 static bool clipping;
 static int clippingPin;
 
-static int  newData[8], prevData;                           // Variables to store ADC result
+static int  newData[MUXSIZE], prevData;                           // Variables to store ADC result
 
-static unsigned int time, totalTimer;                    // Variables used to compute period
-static volatile unsigned int period;
+static unsigned int time[MUXSIZE], totalTimer;                    // Variables used to compute period
+static volatile unsigned int period[MUXSIZE];
 
-static int arrayIndex;                                   // Index to save data in the correct position of the arrays
-static int timer[ARRAY_DEPTH];                           // Array to store trigger events
-static int slope[ARRAY_DEPTH];                           // Array to store changing in slope events
+static int arrayIndex[MUXSIZE];                                   // Index to save data in the correct position of the arrays
+static int timer[ARRAY_DEPTH][MUXSIZE];                           // Array to store trigger events
+static int slope[ARRAY_DEPTH][MUXSIZE];                           // Array to store changing in slope events
 
-static int maxSlope;                                     // Variable to store max detected amplitude
+static int maxSlope[MUXSIZE];                                     // Variable to store max detected amplitude
 static int newSlope;                                     // Variable to store a new slope
 
-static int noMatch;                                      // Variable to store non-matching trigger events
+static int noMatch[MUXSIZE];                                      // Variable to store non-matching trigger events
 
-static unsigned int amplitudeTimer;                      // Variable to reset trigger
-static int maxAmplitude;                                 // Variable to store the max detected amplitude
+static unsigned int amplitudeTimer[MUXSIZE];                      // Variable to reset trigger
+static int maxAmplitude[MUXSIZE];                                 // Variable to store the max detected amplitude
 static int newMaxAmplitude;                              // Variable used to check if maxAmplitude must be updated
 
-static volatile int checkMaxAmp;                         // Used to update the new frequency in base of the AMplitude threshold
+static volatile int checkMaxAmp[MUXSIZE];                         // Used to update the new frequency in base of the AMplitude threshold
 
 // For multiplexer
 
@@ -39,27 +41,26 @@ int r0 = 0;      //value of select pin at the 4051 (s0)
 int r1 = 0;      //value of select pin at the 4051 (s1)
 int r2 = 0;      //value of select pin at the 4051 (s2)
 
+int currentMuxPin = 0;
 
-AudioFrequencyMeterMultiplexed::AudioFrequencyMeterMultiplexed(int s0, int s1, int s2) {
-	_s0 = s0;
-	_s1 = s1;
-	_s2 = s2;
+
+AudioFrequencyMeterMultiplexed::AudioFrequencyMeterMultiplexed() {
 	initializeVariables();
 }
 
 float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 {
-	r0 = bitRead(muxPin, 0);   // use this with arduino 0013 (and newer versions)
-	r1 = bitRead(muxPin, 1);   // use this with arduino 0013 (and newer versions)
-	r2 = bitRead(muxPin, 2);   // use this with arduino 0013 (and newer versions)
+	float frequency = -1;
 
-	digitalWrite(_s0, r0);
-	digitalWrite(_s1, r1);
-	digitalWrite(_s2, r2);
+	if (checkMaxAmp[muxPin] > amplitudeThreshold) {
+		frequency = (float)(sampleRate / period[muxPin]);
 
-	//Either read or write the multiplexed pin here
+		if ((frequency < minFrequency) || (frequency > maxFrequency)) {
+			frequency = -1;
+		}
+	}
 
-	return getFrequency();
+	return frequency;
 }
 
 void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
@@ -116,25 +117,37 @@ void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
 	minFrequency = min;
 	maxFrequency = max;
 }
-
-float AudioFrequencyMeterMultiplexed::getFrequency()
-{
-	float frequency = -1;
-
-	if (checkMaxAmp > amplitudeThreshold) {
-		frequency = (float)(sampleRate / period);
-
-		if ((frequency < minFrequency) || (frequency > maxFrequency)) {
-			frequency = -1;
-		}
-	}
-
-	return frequency;
-}
+//
+//float AudioFrequencyMeterMultiplexed::getFrequency()
+//{
+//	float frequency = -1;
+//
+//	if (checkMaxAmp > amplitudeThreshold) {
+//		frequency = (float)(sampleRate / period);
+//
+//		if ((frequency < minFrequency) || (frequency > maxFrequency)) {
+//			frequency = -1;
+//		}
+//	}
+//
+//	return frequency;
+//}
 
 /*
    Private Utility Functions
 */
+
+void setMuxPinToRead(int muxPin)
+{
+	r0 = bitRead(muxPin, 0);   // use this with arduino 0013 (and newer versions)
+	r1 = bitRead(muxPin, 1);   // use this with arduino 0013 (and newer versions)
+	r2 = bitRead(muxPin, 2);   // use this with arduino 0013 (and newer versions)
+
+	// TODO: replace hard-coded control pins by _s0, _s1 and _s2
+	digitalWrite(2, r0);
+	digitalWrite(3, r1);
+	digitalWrite(4, r2);
+}
 
 void AudioFrequencyMeterMultiplexed::initializeVariables()
 {
@@ -145,19 +158,19 @@ void AudioFrequencyMeterMultiplexed::initializeVariables()
 	clipping = false;
 	clippingPin = NOT_INITIALIZED;
 
-	for (int i = 0; i < sizeof(newData); i++)
+	for (int i = 0; i < MUXSIZE; i++)
 	{
 		newData[i] = 0;
+		maxAmplitude[i] = 0;
+		time[i] = 0;
+		amplitudeTimer[i] = 0;
+		maxSlope[i] = 0;
+		noMatch[i] = 0;
+		arrayIndex[i] = 0;
+		checkMaxAmp[i] = 0;
 	}
 
 	prevData = MIDPOINT;
-	time = 0;
-	arrayIndex = 0;
-	maxSlope = 0;
-	noMatch = 0;
-	amplitudeTimer = 0;
-	maxAmplitude = 0;
-	checkMaxAmp = 0;
 	minFrequency = DEFAULT_MIN_FREQUENCY;
 	maxFrequency = DEFAULT_MAX_FREQUENCY;
 }
@@ -299,13 +312,6 @@ uint8_t ADCread()
 	return returnValue;
 }
 
-void TC5_Handler(void)
-{
-	analyzeIncomingData(0);
-
-	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
-}
-
 void analyzeIncomingData(int index)
 {
 	prevData = newData[index];
@@ -315,48 +321,48 @@ void analyzeIncomingData(int index)
 
 		newSlope = newData[index] - prevData;
 
-		if (abs(newSlope - maxSlope) < slopeTolerance) {
-			slope[arrayIndex] = newSlope;
-			timer[arrayIndex] = time;
-			time = 0;
+		if (abs(newSlope - maxSlope[index]) < slopeTolerance) {
+			slope[arrayIndex[index]][index] = newSlope;
+			timer[arrayIndex[index]][index] = time[index];
+			time[index] = 0;
 
-			if (arrayIndex == 0) {
-				noMatch = 0;
-				arrayIndex++;
+			if (arrayIndex[index] == 0) {
+				noMatch[index] = 0;
+				arrayIndex[index]++;
 			}
-			else if ((abs(timer[0] - timer[arrayIndex]) < timerTolerance) && (abs(slope[0] - newSlope) < slopeTolerance)) {
+			else if ((abs(timer[0] - timer[arrayIndex[index]]) < timerTolerance) && (abs(slope[0][index] - newSlope) < slopeTolerance)) {
 				totalTimer = 0;
-				for (int i = 0; i < arrayIndex; i++) {
-					totalTimer += timer[i];
+				for (int i = 0; i < arrayIndex[index]; i++) {
+					totalTimer += timer[i][index];
 				}
-				period = totalTimer;
+				period[index] = totalTimer;
 
-				timer[0] = timer[arrayIndex];
-				slope[0] = slope[arrayIndex];
-				arrayIndex = 1;
-				noMatch = 0;
+				timer[0][index] = timer[arrayIndex[index]][index];
+				slope[0][index] = slope[arrayIndex[index]][index];
+				arrayIndex[index] = 1;
+				noMatch[index] = 0;
 			}
 			else {
-				arrayIndex++;
-				if (arrayIndex > ARRAY_DEPTH - 1) {
-					arrayIndex = 0;
-					noMatch = 0;
-					maxSlope = 0;
+				arrayIndex[index]++;
+				if (arrayIndex[index] > ARRAY_DEPTH - 1) {
+					arrayIndex[index] = 0;
+					noMatch[index] = 0;
+					maxSlope[index] = 0;
 				}
 			}
 		}
-		else if (newSlope > maxSlope) {
-			maxSlope = newSlope;
-			time = 0;
-			noMatch = 0;
-			arrayIndex = 0;
+		else if (newSlope > maxSlope[index]) {
+			maxSlope[index] = newSlope;
+			time[index] = 0;
+			noMatch[index] = 0;
+			arrayIndex[index] = 0;
 		}
 		else {
-			noMatch++;
-			if (noMatch > ARRAY_DEPTH - 1) {
-				arrayIndex = 0;
-				noMatch = 0;
-				maxSlope = 0;
+			noMatch[index]++;
+			if (noMatch[index] > ARRAY_DEPTH - 1) {
+				arrayIndex[index] = 0;
+				noMatch[index] = 0;
+				maxSlope[index] = 0;
 			}
 		}
 	}
@@ -369,18 +375,30 @@ void analyzeIncomingData(int index)
 		}
 	}
 
-	time++;                             // Incremented at sampleRate
-	amplitudeTimer++;                   // Incremented at sampleRate
+	time[index]++;                             // Incremented at sampleRate
+	amplitudeTimer[index]++;                   // Incremented at sampleRate
 
 	newMaxAmplitude = abs(MIDPOINT - newData[index]);
 
-	if (newMaxAmplitude > maxAmplitude) {
-		maxAmplitude = newMaxAmplitude;
+	if (newMaxAmplitude > maxAmplitude[index]) {
+		maxAmplitude[index] = newMaxAmplitude;
 	}
 
-	if (amplitudeTimer >= TIMER_TIMEOUT) {
-		amplitudeTimer = 0;
-		checkMaxAmp = maxAmplitude;
-		maxAmplitude = 0;
+	if (amplitudeTimer[index] >= TIMER_TIMEOUT) {
+		amplitudeTimer[index] = 0;
+		checkMaxAmp[index] = maxAmplitude[index];
+		maxAmplitude[index] = 0;
 	}
 }
+
+void TC5_Handler(void)
+{
+	setMuxPinToRead(currentMuxPin);
+
+	analyzeIncomingData(currentMuxPin);
+
+	currentMuxPin++;
+
+	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
+}
+

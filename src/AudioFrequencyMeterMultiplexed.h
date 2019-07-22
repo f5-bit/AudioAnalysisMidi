@@ -14,7 +14,7 @@ uint8_t ADCread();
 
 class AudioFrequencyMeterMultiplexed {
 public:
-	AudioFrequencyMeterMultiplexed(int s0, int s1, int s2);
+	AudioFrequencyMeterMultiplexed(); //(int s0, int s1, int s2);
 
 	float getFrequencyMux(int muxPin);
 
@@ -28,8 +28,6 @@ public:
 	void setTimerTolerance(int tolerance);
 	void setSlopeTolerance(int tolerance);
 	void setBandwidth(float minFrequency, float maxFrequency);
-
-	float getFrequency(void);
 
 private:
 	void initializeVariables(void);
@@ -45,10 +43,6 @@ private:
 	void tcReset(void);
 
 public:
-	// For multiplexer
-	int _s0;
-	int _s1;
-	int _s2;
 
 private:
 	int samplePin;           // Pin used to sample the signal
@@ -59,4 +53,8 @@ private:
 	float minFrequency;      // Variable to store the minimum frequency that can be applied in input
 	float maxFrequency;      // Variable to store the maximum frequency that can be applied in input
 
+	// For multiplexer
+	static int _s0;
+	static int _s1;
+	static int _s2;
 };

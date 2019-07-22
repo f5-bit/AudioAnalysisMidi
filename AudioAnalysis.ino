@@ -9,7 +9,7 @@
 int s0 = 2;
 int s1 = 3;
 int s2 = 4;
-AudioFrequencyMeterMultiplexed meter(s0, s1, s2);
+AudioFrequencyMeterMultiplexed meter;
 
 int count = 0;   //which y pin we are selecting
 int input = A0;
@@ -31,6 +31,10 @@ void setup() {
 //       get frequency (set mux control pins there) and loop through all pins
 // --> loop through multiplexer first and then get frequency for each pin. Otherwise input is incorrect!
 void loop() {
+
+  int frequency = meter.getFrequencyMux(0);
+  Serial.print(frequency);
+  Serial.println(" Hz");
 
   //for (count = 0; count <= 7; count++) {
 
@@ -57,10 +61,5 @@ void loop() {
   //    Serial.println(" Hz");
   //  //}
   //}
-
-	float frequency = meter.getFrequency();
-	
-		Serial.print(frequency);
-		Serial.println(" Hz");
 	
 }
