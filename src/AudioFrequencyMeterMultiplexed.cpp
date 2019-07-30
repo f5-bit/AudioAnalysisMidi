@@ -63,10 +63,23 @@ float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 	return frequency;
 }
 
+void setMuxPinToRead(int muxPin)
+{
+	r0 = bitRead(muxPin, 0);   // use this with arduino 0013 (and newer versions)
+	r1 = bitRead(muxPin, 1);   // use this with arduino 0013 (and newer versions)
+	r2 = bitRead(muxPin, 2);   // use this with arduino 0013 (and newer versions)
+
+	// TODO: replace hard-coded control pins by _s0, _s1 and _s2
+	digitalWrite(2, r0);
+	digitalWrite(3, r1);
+	digitalWrite(4, r2);
+}
+
 void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
 {
 	samplePin = pin;                              // Store ADC channel to sample
 	sampleRate = rate;                            // Store sample rate value
+	setMuxPinToRead(0);
 	analogRead(pin);                              // To start setting-up the ADC
 
 	ADCdisable();
@@ -136,18 +149,6 @@ void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
 /*
    Private Utility Functions
 */
-
-void setMuxPinToRead(int muxPin)
-{
-	r0 = bitRead(muxPin, 0);   // use this with arduino 0013 (and newer versions)
-	r1 = bitRead(muxPin, 1);   // use this with arduino 0013 (and newer versions)
-	r2 = bitRead(muxPin, 2);   // use this with arduino 0013 (and newer versions)
-
-	// TODO: replace hard-coded control pins by _s0, _s1 and _s2
-	digitalWrite(2, r0);
-	digitalWrite(3, r1);
-	digitalWrite(4, r2);
-}
 
 void AudioFrequencyMeterMultiplexed::initializeVariables()
 {
@@ -393,11 +394,11 @@ void analyzeIncomingData(int index)
 
 void TC5_Handler(void)
 {
-	setMuxPinToRead(currentMuxPin);
+	//setMuxPinToRead(currentMuxPin);
 
 	analyzeIncomingData(currentMuxPin);
 
-	currentMuxPin++;
+	//currentMuxPin++;
 
 	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
 }
