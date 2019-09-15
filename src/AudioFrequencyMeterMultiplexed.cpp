@@ -394,11 +394,12 @@ void analyzeIncomingData(int index)
 
 void TC5_Handler(void)
 {
-	//setMuxPinToRead(currentMuxPin);
+	setMuxPinToRead(currentMuxPin);
 
 	analyzeIncomingData(currentMuxPin);
 
-	//currentMuxPin++;
+	currentMuxPin++;
+	currentMuxPin = currentMuxPin % 8;
 
 	TC5->COUNT16.INTFLAG.bit.MC0 = 1;     // Clear interrupt
 }
