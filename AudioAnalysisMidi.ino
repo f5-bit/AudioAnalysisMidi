@@ -14,7 +14,7 @@
 #define MAX_DURATION  1000                    // Defines the max play duration of the note
 
 #define BOTTOMPOINT             0
-#define MIDPOINT                197
+#define MIDPOINT                150
 #define TOPPOINT                255
 
 int s0 = 2;
