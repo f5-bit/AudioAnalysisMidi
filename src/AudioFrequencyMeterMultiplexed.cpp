@@ -51,8 +51,9 @@ AudioFrequencyMeterMultiplexed::AudioFrequencyMeterMultiplexed() {
 float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 {
 	float frequency = -1;
+	//samplerate: 45028
 
-	if (checkMaxAmp[muxPin] > amplitudeThreshold) {
+	if (checkMaxAmp[muxPin] > amplitudeThreshold && getAnalogueData(muxPin) > MIDPOINT) {
 		frequency = (float)(sampleRate / period[muxPin]);
 
 		if ((frequency < minFrequency) || (frequency > maxFrequency)) {
@@ -61,6 +62,10 @@ float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 	}
 
 	return frequency;
+}
+
+float AudioFrequencyMeterMultiplexed::getAnalogueData(int muxPin) {
+	return newData[muxPin];
 }
 
 void setMuxPinToRead(int muxPin)
@@ -79,6 +84,11 @@ void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
 {
 	samplePin = pin;                              // Store ADC channel to sample
 	sampleRate = rate;                            // Store sample rate value
+
+	pinMode(2, OUTPUT);
+	pinMode(3, OUTPUT);
+	pinMode(4, OUTPUT);
+
 	setMuxPinToRead(0);
 	analogRead(pin);                              // To start setting-up the ADC
 
@@ -130,21 +140,6 @@ void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
 	minFrequency = min;
 	maxFrequency = max;
 }
-//
-//float AudioFrequencyMeterMultiplexed::getFrequency()
-//{
-//	float frequency = -1;
-//
-//	if (checkMaxAmp > amplitudeThreshold) {
-//		frequency = (float)(sampleRate / period);
-//
-//		if ((frequency < minFrequency) || (frequency > maxFrequency)) {
-//			frequency = -1;
-//		}
-//	}
-//
-//	return frequency;
-//}
 
 /*
    Private Utility Functions
@@ -313,82 +308,82 @@ uint8_t ADCread()
 	return returnValue;
 }
 
-void analyzeIncomingData(int index)
+void analyzeIncomingData(int muxPin)
 {
-	prevData = newData[index];
-	newData[index] = ADCread();
+	prevData = newData[muxPin];
+	newData[muxPin] = ADCread();
 
-	if ((prevData < MIDPOINT) && (newData[index] >= MIDPOINT)) {
+	if ((prevData < MIDPOINT) && (newData[muxPin] >= MIDPOINT)) {
 
-		newSlope = newData[index] - prevData;
+		newSlope = newData[muxPin] - prevData;
 
-		if (abs(newSlope - maxSlope[index]) < slopeTolerance) {
-			slope[arrayIndex[index]][index] = newSlope;
-			timer[arrayIndex[index]][index] = time[index];
-			time[index] = 0;
+		if (abs(newSlope - maxSlope[muxPin]) < slopeTolerance) {
+			slope[arrayIndex[muxPin]][muxPin] = newSlope;
+			timer[arrayIndex[muxPin]][muxPin] = time[muxPin];
+			time[muxPin] = 0;
 
-			if (arrayIndex[index] == 0) {
-				noMatch[index] = 0;
-				arrayIndex[index]++;
+			if (arrayIndex[muxPin] == 0) {
+				noMatch[muxPin] = 0;
+				arrayIndex[muxPin]++;
 			}
-			else if ((abs(timer[0] - timer[arrayIndex[index]]) < timerTolerance) && (abs(slope[0][index] - newSlope) < slopeTolerance)) {
+			else if ((abs(timer[0] - timer[arrayIndex[muxPin]]) < timerTolerance) && (abs(slope[0][muxPin] - newSlope) < slopeTolerance)) {
 				totalTimer = 0;
-				for (int i = 0; i < arrayIndex[index]; i++) {
-					totalTimer += timer[i][index];
+				for (int i = 0; i < arrayIndex[muxPin]; i++) {
+					totalTimer += timer[i][muxPin];
 				}
-				period[index] = totalTimer;
+				period[muxPin] = totalTimer;
 
-				timer[0][index] = timer[arrayIndex[index]][index];
-				slope[0][index] = slope[arrayIndex[index]][index];
-				arrayIndex[index] = 1;
-				noMatch[index] = 0;
+				timer[0][muxPin] = timer[arrayIndex[muxPin]][muxPin];
+				slope[0][muxPin] = slope[arrayIndex[muxPin]][muxPin];
+				arrayIndex[muxPin] = 1;
+				noMatch[muxPin] = 0;
 			}
 			else {
-				arrayIndex[index]++;
-				if (arrayIndex[index] > ARRAY_DEPTH - 1) {
-					arrayIndex[index] = 0;
-					noMatch[index] = 0;
-					maxSlope[index] = 0;
+				arrayIndex[muxPin]++;
+				if (arrayIndex[muxPin] > ARRAY_DEPTH - 1) {
+					arrayIndex[muxPin] = 0;
+					noMatch[muxPin] = 0;
+					maxSlope[muxPin] = 0;
 				}
 			}
 		}
-		else if (newSlope > maxSlope[index]) {
-			maxSlope[index] = newSlope;
-			time[index] = 0;
-			noMatch[index] = 0;
-			arrayIndex[index] = 0;
+		else if (newSlope > maxSlope[muxPin]) {
+			maxSlope[muxPin] = newSlope;
+			time[muxPin] = 0;
+			noMatch[muxPin] = 0;
+			arrayIndex[muxPin] = 0;
 		}
 		else {
-			noMatch[index]++;
-			if (noMatch[index] > ARRAY_DEPTH - 1) {
-				arrayIndex[index] = 0;
-				noMatch[index] = 0;
-				maxSlope[index] = 0;
+			noMatch[muxPin]++;
+			if (noMatch[muxPin] > ARRAY_DEPTH - 1) {
+				arrayIndex[muxPin] = 0;
+				noMatch[muxPin] = 0;
+				maxSlope[muxPin] = 0;
 			}
 		}
 	}
 
 	if (clippingPin > 0)
 	{
-		if (newData[index] == BOTTOMPOINT || newData[index] == TOPPOINT) {
+		if (newData[muxPin] == BOTTOMPOINT || newData[muxPin] == TOPPOINT) {
 			digitalWrite(clippingPin, HIGH);
 			clipping = true;
 		}
 	}
 
-	time[index]++;                             // Incremented at sampleRate
-	amplitudeTimer[index]++;                   // Incremented at sampleRate
+	time[muxPin]++;                             // Incremented at sampleRate
+	amplitudeTimer[muxPin]++;                   // Incremented at sampleRate
 
-	newMaxAmplitude = abs(MIDPOINT - newData[index]);
+	newMaxAmplitude = abs(MIDPOINT - newData[muxPin]);
 
-	if (newMaxAmplitude > maxAmplitude[index]) {
-		maxAmplitude[index] = newMaxAmplitude;
+	if (newMaxAmplitude > maxAmplitude[muxPin]) {
+		maxAmplitude[muxPin] = newMaxAmplitude;
 	}
 
-	if (amplitudeTimer[index] >= TIMER_TIMEOUT) {
-		amplitudeTimer[index] = 0;
-		checkMaxAmp[index] = maxAmplitude[index];
-		maxAmplitude[index] = 0;
+	if (amplitudeTimer[muxPin] >= TIMER_TIMEOUT) {
+		amplitudeTimer[muxPin] = 0;
+		checkMaxAmp[muxPin] = maxAmplitude[muxPin];
+		maxAmplitude[muxPin] = 0;
 	}
 }
 

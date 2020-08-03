@@ -17,6 +17,7 @@ public:
 	AudioFrequencyMeterMultiplexed(); //(int s0, int s1, int s2);
 
 	float getFrequencyMux(int muxPin);
+	float getAnalogueData(int muxPin);
 
 	void begin(int pin, unsigned int sampleRate);
 	void end(void);
