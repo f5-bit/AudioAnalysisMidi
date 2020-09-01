@@ -68,6 +68,10 @@ int r0 = 0;      //value of select pin at the 4051 (s0)
 int r1 = 0;      //value of select pin at the 4051 (s1)
 int r2 = 0;      //value of select pin at the 4051 (s2)
 
+static int _s0;
+static int _s1;
+static int _s2;
+
 int currentMuxPin = 0;
 
 // [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
@@ -95,6 +99,13 @@ float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 
 float AudioFrequencyMeterMultiplexed::getAnalogueData(int muxPin) {
 	return newData[muxPin];
+}
+
+void AudioFrequencyMeterMultiplexed::setMultiplexer(int s0, int s1, int s2)
+{
+	_s0 = s0;
+	_s1 = s1;
+	_s2 = s2;
 }
 
 // Adapted from

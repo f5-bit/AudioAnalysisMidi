@@ -33,6 +33,7 @@ public:
 
 	float getFrequencyMux(int muxPin);
 	float getAnalogueData(int muxPin);
+	void setMultiplexer(int s0, int s1, int s2);
 
 	void begin(int pin, unsigned int sampleRate);
 	void end(void);
@@ -68,9 +69,4 @@ private:
 
 	float minFrequency;      // Variable to store the minimum frequency that can be applied in input
 	float maxFrequency;      // Variable to store the maximum frequency that can be applied in input
-
-	// For multiplexer
-	static int _s0;
-	static int _s1;
-	static int _s2;
 };

@@ -1,8 +1,17 @@
-/*
-  Name:		AudioAnalysis.ino
-  Created:	06.06.2019 23:14:24
-  Author:	Franca Bittner
-*/
+/***************************************************************************************
+*  Name:	AudioAnalysisMidi.ino
+*  Date:	01.09.2020
+*  Author:	Franca Bittner
+***************************************************************************************/
+
+/* Based on*/
+/***************************************************************************************
+*  Title:	  Analog to Midi Converter for Arduino MKR1000
+*  Authors:	  Arturo Guadalupi <a.guadalupi@arduino.cc>
+*  Date:	  29.01.2016
+*  Retrieved: 01.09.2020
+*  Availability: https://www.arduino.cc/en/Tutorial/AnalogToMidi
+***************************************************************************************/
 
 #include "src/AudioFrequencyMeterMultiplexed.h"
 #include <MIDIUSB.h>
@@ -17,14 +26,7 @@
 #define MIDPOINT                150
 #define TOPPOINT                255
 
-int s0 = 2;
-int s1 = 3;
-int s2 = 4;
 AudioFrequencyMeterMultiplexed meter;
-
-int count = 0;   //which y pin we are selecting
-int input = A0;
-
 
 int notesArray[DEPTH];                        // Array to store detected notes and find the "correct" note which occurred the most often
 int occurrences[DEPTH];                       // Array in which the number of occurrences for each note are stored
@@ -38,38 +40,30 @@ unsigned int humanTime;                       // Used to determine when the next
 int intensity = 64;                           // The volume of the played note is fixed at 64
 
 
-void setup() {
-  //  pinMode(s0, OUTPUT);
-  //  pinMode(s1, OUTPUT);
-  //  pinMode(s2, OUTPUT);
+// Multiplexer control/select pins
+int s0 = 2;
+int s1 = 3;
+int s2 = 4;
 
+void setup() {
   Serial.begin(115200);
   Serial.println("started");
 
+  meter.setMultiplexer(s0,s1,s2);
   meter.setBandwidth(70.00, 1500);    // Ignore frequency out of this range
   meter.begin(A0, 45000);             // Intialize A0 at sample rate of 45kHz
 }
 
-
-// TODO: Find out the best solution: either loop the multiplexer (set mux control pins) and get frequency or
-//       get frequency (set mux control pins there) and loop through all pins
-// --> loop through multiplexer first and then get frequency for each pin. Otherwise input is incorrect!
 void loop() {
-  int frequency = meter.getFrequencyMux(0);
-  int data = meter.getAnalogueData(0);
-  Serial.print(data);
-  Serial.print(' ');
-  Serial.print(TOPPOINT);
-  Serial.print(' ');
-  Serial.print(MIDPOINT);
-  Serial.print(' ');
-  //  for (int i = 0; i < 8; i++) {
-  //    int data = meter.getAnalogueData(i);
-  //    Serial.print(data);
-  //    Serial.print(' ');
-  //  }
-  Serial.println(BOTTOMPOINT);
+  // Display analogue input
+  printLimits();
+  for (int i = 0; i < 1; i++) {
+    printData(meter.getAnalogueData(i));
+  }
 
+  // Analyse frequency, see:
+  // [Guadalupi 2016, "Analog to Midi Converter for Arduino MKR1000"]
+  int frequency = meter.getFrequencyMux(0);
   if (frequency > 0)
   {
     int noteIndex = searchForNote(frequency); // Find the index of the corresponding frequency
@@ -150,6 +144,20 @@ void loop() {
     noteOff(0, previousNote, intensity);      // Turn the note off
 }
 
+void printData(int data) {
+    Serial.print(data);
+    Serial.print(' ');
+}
+
+void printLimits() {
+    Serial.print(TOPPOINT);
+    Serial.print(' ');
+    Serial.print(MIDPOINT);
+    Serial.print(' ');
+    Serial.println(BOTTOMPOINT);
+}
+
+// [Guadalupi 2016, "Analog to Midi Converter for Arduino MKR1000"]
 int searchForNote(float frequency)
 {
   float minimum = abs(frequency - noteFrequency[0]);
@@ -170,11 +178,13 @@ int searchForNote(float frequency)
   return index;
 }
 
+// [Guadalupi 2016, "Analog to Midi Converter for Arduino MKR1000"]
 void noteOn(byte channel, byte pitch, byte velocity) {
   midiEventPacket_t noteOn = { 0x09, 0x90 | channel, pitch, velocity };
   MidiUSB.sendMIDI(noteOn);
 }
 
+// [Guadalupi 2016, "Analog to Midi Converter for Arduino MKR1000"]
 void noteOff(byte channel, byte pitch, byte velocity) {
   midiEventPacket_t noteOff = { 0x08, 0x80 | channel, pitch, velocity };
   MidiUSB.sendMIDI(noteOff);
