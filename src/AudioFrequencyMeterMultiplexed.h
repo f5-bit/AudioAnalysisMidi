@@ -1,3 +1,18 @@
+/***************************************************************************************
+*  Name:	AudioFrequencyMeterMultiplexed.h
+*  Date:	01.09.2020
+*  Author:	Franca Bittner
+***************************************************************************************/
+
+/* Based on*/
+/***************************************************************************************
+*  Title:	Audio Frequency Meter Library for Arduino Zero
+*  Authors:	Sandeep Mistry and Arturo Guadalupi
+*  Date:	17.01.2017
+*  Version:	1.0.3
+*  Availability: https://github.com/arduino-libraries/AudioFrequencyMeter
+***************************************************************************************/
+
 #include "Arduino.h"
 #include "wiring_private.h"
 

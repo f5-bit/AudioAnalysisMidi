@@ -1,5 +1,29 @@
+/***************************************************************************************
+*  Name:	AudioFrequencyMeterMultiplexed.cpp
+*  Date:	01.09.2020
+*  Author:	Franca Bittner
+***************************************************************************************/
+
+/* Based on*/
+/***************************************************************************************
+*  Title:	Audio Frequency Meter Library for Arduino Zero
+*  Authors:	Sandeep Mistry and Arturo Guadalupi
+*  Date:	17.01.2017
+*  Version:	1.0.3
+*  Availability: https://github.com/arduino-libraries/AudioFrequencyMeter
+***************************************************************************************/
+
+/***************************************************************************************
+*  Title:	Analog Multiplexer/Demultiplexer - 4051
+*  Authors:	David C., Tomek N., Ross R. and Igor de Oliveira Sá.
+*  Date:	n.d.
+*  Retrieved: 01.09.2020
+*  Availability: https://playground.arduino.cc/Learning/4051/
+***************************************************************************************/
+
 #include "AudioFrequencyMeterMultiplexed.h"
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 #define ARRAY_DEPTH             20
 #define NOT_INITIALIZED         -1
 #define TIMER_TIMEOUT           1000
@@ -7,8 +31,11 @@
 #define MIDPOINT                127
 #define TOPPOINT                255
 
+// Additional macro for size of multiplexer
 #define MUXSIZE					8
 
+// Static variables from
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 static int slopeTolerance;
 static int timerTolerance;
 
@@ -25,29 +52,31 @@ static int timer[ARRAY_DEPTH][MUXSIZE];                           // Array to st
 static int slope[ARRAY_DEPTH][MUXSIZE];                           // Array to store changing in slope events
 
 static int maxSlope[MUXSIZE];                                     // Variable to store max detected amplitude
-static int newSlope;                                     // Variable to store a new slope
+static int newSlope;											  // Variable to store a new slope
 
 static int noMatch[MUXSIZE];                                      // Variable to store non-matching trigger events
 
 static unsigned int amplitudeTimer[MUXSIZE];                      // Variable to reset trigger
 static int maxAmplitude[MUXSIZE];                                 // Variable to store the max detected amplitude
-static int newMaxAmplitude;                              // Variable used to check if maxAmplitude must be updated
+static int newMaxAmplitude;										  // Variable used to check if maxAmplitude must be updated
 
 static volatile int checkMaxAmp[MUXSIZE];                         // Used to update the new frequency in base of the AMplitude threshold
 
-// For multiplexer
-
+// Variables for multiplexer from
+// [David et al. n. d., "Analog Multiplexer/Demultiplexer - 4051"]
 int r0 = 0;      //value of select pin at the 4051 (s0)
 int r1 = 0;      //value of select pin at the 4051 (s1)
 int r2 = 0;      //value of select pin at the 4051 (s2)
 
 int currentMuxPin = 0;
 
-
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 AudioFrequencyMeterMultiplexed::AudioFrequencyMeterMultiplexed() {
 	initializeVariables();
 }
 
+// Adapted for multiplexer from
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 float AudioFrequencyMeterMultiplexed::getFrequencyMux(int muxPin)
 {
 	float frequency = -1;
@@ -68,6 +97,8 @@ float AudioFrequencyMeterMultiplexed::getAnalogueData(int muxPin) {
 	return newData[muxPin];
 }
 
+// Adapted from
+// [David et al. n. d., "Analog Multiplexer/Demultiplexer - 4051"]
 void setMuxPinToRead(int muxPin)
 {
 	r0 = bitRead(muxPin, 0);   // use this with arduino 0013 (and newer versions)
@@ -80,6 +111,8 @@ void setMuxPinToRead(int muxPin)
 	digitalWrite(4, r2);
 }
 
+// Adapted for multiplexer from
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
 {
 	samplePin = pin;                              // Store ADC channel to sample
@@ -99,6 +132,7 @@ void AudioFrequencyMeterMultiplexed::begin(int pin, unsigned int rate)
 	tcEnable();
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::end()
 {
 	ADCdisable();
@@ -106,12 +140,14 @@ void AudioFrequencyMeterMultiplexed::end()
 	tcReset();
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::setClippingPin(int pin)
 {
 	clippingPin = pin;                              // Store the clipping pin value
 	pinMode(clippingPin, OUTPUT);
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::checkClipping()
 {
 	if (clipping) {
@@ -120,21 +156,25 @@ void AudioFrequencyMeterMultiplexed::checkClipping()
 	}
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::setAmplitudeThreshold(int threshold)
 {
 	amplitudeThreshold = abs(MIDPOINT - threshold);
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::setTimerTolerance(int tolerance)
 {
 	timerTolerance = tolerance;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::setSlopeTolerance(int tolerance)
 {
 	slopeTolerance = tolerance;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
 {
 	minFrequency = min;
@@ -145,6 +185,8 @@ void AudioFrequencyMeterMultiplexed::setBandwidth(float min, float max)
    Private Utility Functions
 */
 
+// Adapted for multiplexer from
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::initializeVariables()
 {
 	slopeTolerance = DEFAULT_SLOPE_TOLERANCE;
@@ -171,6 +213,7 @@ void AudioFrequencyMeterMultiplexed::initializeVariables()
 	maxFrequency = DEFAULT_MAX_FREQUENCY;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::ADCconfigure()
 {
 	ADC->CTRLB.bit.RESSEL = ADC_CTRLB_RESSEL_8BIT_Val;
@@ -192,11 +235,13 @@ void AudioFrequencyMeterMultiplexed::ADCconfigure()
 	ADCsetMux();
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 bool ADCisSyncing()
 {
 	return (ADC->STATUS.bit.SYNCBUSY);
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::ADCdisable()
 {
 	ADC->CTRLA.bit.ENABLE = 0x00;                               // Disable ADC
@@ -204,6 +249,7 @@ void AudioFrequencyMeterMultiplexed::ADCdisable()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::ADCenable()
 {
 	ADC->CTRLA.bit.ENABLE = 0x01;                               // Enable ADC
@@ -211,6 +257,7 @@ void AudioFrequencyMeterMultiplexed::ADCenable()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::ADCsetMux()
 {
 	if (samplePin < A0)
@@ -225,6 +272,7 @@ void AudioFrequencyMeterMultiplexed::ADCsetMux()
 	ADC->INPUTCTRL.bit.MUXPOS = g_APinDescription[samplePin].ulADCChannelNumber; // Selection for the positive ADC input
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::tcConfigure()
 {
 	// Enable GCLK for TCC2 and TC5 (timer counter input clock)
@@ -259,11 +307,13 @@ void AudioFrequencyMeterMultiplexed::tcConfigure()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 bool AudioFrequencyMeterMultiplexed::tcIsSyncing()
 {
 	return TC5->COUNT16.STATUS.reg & TC_STATUS_SYNCBUSY;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::tcEnable()
 {
 	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;
@@ -271,6 +321,7 @@ void AudioFrequencyMeterMultiplexed::tcEnable()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::tcReset()
 {
 	TC5->COUNT16.CTRLA.reg = TC_CTRLA_SWRST;
@@ -280,6 +331,7 @@ void AudioFrequencyMeterMultiplexed::tcReset()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void AudioFrequencyMeterMultiplexed::tcDisable()
 {
 	// Disable TC5
@@ -288,6 +340,7 @@ void AudioFrequencyMeterMultiplexed::tcDisable()
 		;
 }
 
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 uint8_t ADCread()
 {
 	uint8_t returnValue;
@@ -308,6 +361,8 @@ uint8_t ADCread()
 	return returnValue;
 }
 
+// Adapted for multiplexer from TC5_Handler by
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void analyzeIncomingData(int muxPin)
 {
 	prevData = newData[muxPin];
@@ -387,12 +442,15 @@ void analyzeIncomingData(int muxPin)
 	}
 }
 
+// Adapted for multiplexer from TC5_Handler by
+// [Mistry & Guadalupi 2017, "Audio Frequency Meter Library for Arduino Zero"]
 void TC5_Handler(void)
 {
 	setMuxPinToRead(currentMuxPin);
 
 	analyzeIncomingData(currentMuxPin);
 
+	// Loop through all multiplexer inputs at sampleRate
 	currentMuxPin++;
 	currentMuxPin = currentMuxPin % 8;
 
