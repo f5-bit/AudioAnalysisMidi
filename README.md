@@ -1,11 +1,14 @@
 # Audio Analysis Midi for Arduino Zero
 
-Based on [Audio Frequency Meter Library](https://github.com/arduino-libraries/AudioFrequencyMeter), Arduino sketch [AnalogToMidi](https://github.com/arduino-libraries/AudioFrequencyMeter) by Arturo Guadalupi and [Analog Multiplexer/Demultiplexer - 4051](https://playground.arduino.cc/Learning/4051/) by David C., Tomek N., Ross R. and Igor de Oliveira Sá.
-
 Allows the Arduino Zero and MKR1000 to sample several generic input audio signals with an analogue multiplexer, get the fundamental pitch for each multiplexed signal and output the corresponding MIDI signal.
 
+Based on
+* [Audio Frequency Meter Library](https://github.com/arduino-libraries/AudioFrequencyMeter)
+* Arduino sketch [AnalogToMidi](https://github.com/arduino-libraries/AudioFrequencyMeter) by Arturo Guadalupi
+* [Analog Multiplexer/Demultiplexer - 4051](https://playground.arduino.cc/Learning/4051/) by David C., Tomek N., Ross R. and Igor de Oliveira Sá.
 
-== Methods ==
+
+## Methods
 * begin(uint32_t ulPin, uint32_t sampleRate) : initialize the ADC so sample ulPin at the chosen sample rate. This process works in interrupt using TC5 to start the sampling process. ADC resolution is set to 8 bit
 
 * end() : stops the sampling process disabling both the ADC and TC5 and resetting TC5
