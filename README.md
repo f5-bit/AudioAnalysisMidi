@@ -1,25 +1,9 @@
-= Audio Frequency Meter Library for Arduino =
+# Audio Analysis Midi for Arduino Zero
 
-Allows the Arduino Zero and MKR1000 to sample a generic input audio signal and get the fundamental pitch.
+Based on [Audio Frequency Meter Library](https://github.com/arduino-libraries/AudioFrequencyMeter), Arduino sketch [AnalogToMidi](https://github.com/arduino-libraries/AudioFrequencyMeter) by Arturo Guadalupi and [Analog Multiplexer/Demultiplexer - 4051](https://playground.arduino.cc/Learning/4051/) by David C., Tomek N., Ross R. and Igor de Oliveira Sá.
 
+Allows the Arduino Zero and MKR1000 to sample several generic input audio signals with an analogue multiplexer, get the fundamental pitch for each multiplexed signal and output the corresponding MIDI signal.
 
-== License ==
-
-Copyright (c) Arduino LLC. All right reserved.
-
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 == Methods ==
 * begin(uint32_t ulPin, uint32_t sampleRate) : initialize the ADC so sample ulPin at the chosen sample rate. This process works in interrupt using TC5 to start the sampling process. ADC resolution is set to 8 bit
@@ -38,4 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 * setBandwidth(float minFrequency, float maxFrequency) : set the range of frequencies for which the detected frequency is valid. Default values for now are 60Hz - 1500Hz. This must be improved 
 
-* getFrequency : return the value of the detected frequency if it is above the threshold defined by setAmplitudeThreshold else -1
+* getFrequencyMux(int muxPin) : return the value of the detected frequency for the input signal at the selected multiplexer pin if it is above the threshold defined by setAmplitudeThreshold else -1
+
+* getAnalogueData(int muxPin) : return the value of the ADC for the input signal at the selected multiplexer pin
+
+* void setMultiplexer(int s0, int s1, int s2) : set the select pins for controlling the multiplexer (i.e. 74HCT 4051), see [Analog Multiplexer/Demultiplexer - 4051](https://playground.arduino.cc/Learning/4051/)
